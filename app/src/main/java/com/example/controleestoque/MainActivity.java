@@ -1,13 +1,17 @@
 package com.example.controleestoque;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.PersistableBundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.KeyEvent;
@@ -17,212 +21,113 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ListView;
+import android.widget.TextView;
 
+import com.example.controleestoque.adapter.AdapterProdutosList;
+import com.example.controleestoque.models.Produto;
+
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.Query;
+import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
+import com.squareup.picasso.Picasso;
+
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
+import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
 
-    public static final int PICK_IMAGE = 1;
+    ImageButton btnProximo;
 
-    ImageView ibProduto;
+    ListView lvProdutos;
 
-    Button btnSelectImage;
+    Intent i;
 
-    EditText etQuantity;
-    Button btnPlusQuantity;
-    Button btnMinusQuantity;
+    ArrayList<Produto> listaProdutos = new ArrayList <Produto> ();
+    AdapterProdutosList adapter;
 
-    EditText etIdealQuantity;
-    Button btnPlusIdealQuantity;
-    Button btnMinusIdealQuantity;
+    //firebase
 
-    int quantidade = 0;
-    int quantidadeIdeal = 0;
+    FirebaseDatabase database;
+    DatabaseReference myRef;
+
+    //FirebaseStorage storage;
+    //StorageReference storageReference;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        FirebaseApp firebaseApp = FirebaseApp.initializeApp(this.getApplicationContext());
+
+        database = FirebaseDatabase.getInstance(firebaseApp, "https://controleestoque-f7ac3-default-rtdb.firebaseio.com/");
+        FirebaseStorage.getInstance(firebaseApp);
+
+        myRef = database.getReference("produto");
+        adapter = new AdapterProdutosList(getApplicationContext(), listaProdutos);
+
         setContentView(R.layout.activity_main);
 
-        ibProduto = (ImageView) findViewById(R.id.ibProduto);
-        ibProduto.setImageResource(R.drawable.produto_icon);
-        ibProduto.setLayoutParams(new LinearLayout.LayoutParams(500, 500));
+        btnProximo = (ImageButton) findViewById(R.id.btnProximo);
 
-        etQuantity = (EditText) findViewById(R.id.etQuantity);
-        btnPlusQuantity = (Button) findViewById(R.id.btnPlusQuantity);
-        btnMinusQuantity = (Button) findViewById(R.id.btnMinusQuantity);
+        Picasso.with(this).load(R.drawable.plus).resize(50, 50).centerCrop().into(btnProximo);
 
-        etQuantity.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+        lvProdutos = (ListView) findViewById(R.id.lvProdutos);
 
-            }
+        carregarTabela();
 
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-
-                /*try {
-
-                    if(etQuantity.getText().toString().length() != 0) {
-                        quantidade = Integer.parseInt(etQuantity.getText().toString());
-                    } else {
-                        quantidade = 0;
-                    }
-
-                } catch (Exception e) {
-
-                }*/
-
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-
-                try {
-
-                    if(etQuantity.getText().toString().length() != 0) {
-                        quantidade = Integer.parseInt(etQuantity.getText().toString());
-                    } else {
-                        quantidade = 0;
-                    }
-
-                } catch (Exception e) {
-
-                }
-
-            }
-        });
-
-        btnPlusQuantity.setOnClickListener(new View.OnClickListener() {
+        btnProximo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                quantidade = quantidade + 1;
-                etQuantity.setText("" + quantidade);
+                i = new Intent(MainActivity.this, NewProductActivity.class);
+
+                finish();
+
+                startActivity(i);
             }
-        });
-
-        btnMinusQuantity.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if(quantidade > 0) {
-                    quantidade--;
-                    etQuantity.setText("" + quantidade);
-                }
-            }
-        });
-
-        /////////////////////////////////////
-
-        etIdealQuantity = (EditText) findViewById(R.id.etIdealQuantity);
-        btnPlusIdealQuantity = (Button) findViewById(R.id.btnPlusIdealQuantity);
-        btnMinusIdealQuantity = (Button) findViewById(R.id.btnMinusIdealQuantity);
-
-        etIdealQuantity.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-
-                /*try {
-
-                    if(etQuantity.getText().toString().length() != 0) {
-                        quantidade = Integer.parseInt(etQuantity.getText().toString());
-                    } else {
-                        quantidade = 0;
-                    }
-
-                } catch (Exception e) {
-
-                }*/
-
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-
-                try {
-
-                    if(etIdealQuantity.getText().toString().length() != 0) {
-                        quantidadeIdeal = Integer.parseInt(etIdealQuantity.getText().toString());
-                    } else {
-                        quantidadeIdeal = 0;
-                    }
-
-                } catch (Exception e) {
-
-                }
-
-            }
-        });
-
-        btnPlusIdealQuantity.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                quantidadeIdeal = quantidadeIdeal + 1;
-                etIdealQuantity.setText("" + quantidadeIdeal);
-            }
-        });
-
-        btnMinusIdealQuantity.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if(quantidadeIdeal > 0) {
-                    quantidadeIdeal--;
-                    etIdealQuantity.setText("" + quantidadeIdeal);
-                }
-            }
-        });
-
-        /////////////////////////////////////
-
-        btnSelectImage = (Button) findViewById(R.id.btnSelectImage);
-
-        btnSelectImage.setOnClickListener(new View.OnClickListener() {
-
-            @Override
-            public void onClick(View v) {
-
-                Intent getIntent = new Intent(Intent.ACTION_GET_CONTENT);
-                getIntent.setType("image/*");
-
-                Intent pickIntent = new Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-                pickIntent.setType("image/*");
-
-                Intent chooserIntent = Intent.createChooser(getIntent, "Select Image");
-                chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[] {pickIntent});
-
-                startActivityForResult(chooserIntent, PICK_IMAGE);
-
-            }
-
         });
 
     }
 
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == PICK_IMAGE && resultCode == Activity.RESULT_OK) {
-            if (data == null) {
-                //Display an error
-                return;
+    public void carregarTabela() {
+
+        Query query = myRef.orderByChild("nome");
+
+        query.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+
+                listaProdutos.clear();
+
+                for (DataSnapshot dados : snapshot.getChildren()) {
+                    Produto p = new Produto();
+                    p.setNome(dados.child("nome").getValue().toString());
+                    p.setPreco((Double) dados.child("preco").getValue());
+                    p.setEstoqueAtual(Integer.parseInt(dados.child("estoqueAtual").getValue().toString()));
+                    p.setEstoqueIdeal(Integer.parseInt(dados.child("estoqueIdeal").getValue().toString()));
+                    p.setImagePath(dados.child("imagePath").getValue().toString());
+
+                    listaProdutos.add(p);
+
+                }
+
+                lvProdutos.setAdapter(adapter);
+
             }
-            try {
-                InputStream inputStream = this.getContentResolver().openInputStream(data.getData());
 
-                Bitmap bitmap1 = BitmapFactory.decodeStream(inputStream);
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
 
-                ibProduto.setImageBitmap(bitmap1);
-
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
             }
-            //Now you can do whatever you want with your inpustream, save it as file, upload to a server, decode a bitmap...
-        }
+        });
     }
 
 }
